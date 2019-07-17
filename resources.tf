@@ -1,8 +1,9 @@
+# Create a resource group
 resource "azurerm_resource_group" "azy_network" {
   location = "West Europe"
   name = "devresgrp"
 }
- 
+# Create virtual network and subnet
 resource "azurerm_virtual_network" "azy_virtual_network" {
  address_space = ["10.0.0.0/16"] 
  location = "West Europe"
@@ -19,4 +20,99 @@ resource "azurerm_virtual_network" "azy_virtual_network" {
      address_prefix = "10.0.2.0/24"
  }
 }
+# Create public IPs
+resource "azurerm_public_ip" "myterraformpublicip" {
+    name                         = "myPublicIP"
+    location                     = "West Europe"
+    resource_group_name          = "${azurerm_resource_group.azy_network.name}"
+    allocation_method            = "Dynamic"
+}
+# Create Network Security Group and rule
+resource "azurerm_network_security_group" "myterraformnsg" {
+    name                = "myNetworkSecurityGroup"
+    location            = "West Europe"
+    resource_group_name = "${azurerm_resource_group.azy_network.name}"
+    
+    security_rule {
+        name                       = "SSH"
+        priority                   = 1001
+        direction                  = "Inbound"
+        access                     = "Allow"
+        protocol                   = "Tcp"
+        source_port_range          = "*"
+        destination_port_range     = "22"
+        source_address_prefix      = "*"
+        destination_address_prefix = "*"
+    }
+}
+# Create network interface
+resource "azurerm_network_interface" "myterraformnic" {
+    name                      = "myNIC"
+    location                  = "West Europe"
+    resource_group_name       = "${azurerm_resource_group.azy_network.name}"
+    network_security_group_id = "${azurerm_network_security_group.myterraformnnsg.id}"
 
+    ip_configuration {
+        name                          = "myNicConfiguration"
+        subnet_id                     = "${azurerm_subnet.azy_virtual_network.id}"
+        private_ip_address_allocation = "Dynamic"
+        public_ip_address_id          = "${azurerm_public_ip.myterraformpublicip.id}"
+    }
+}# Generate random text for a unique storage account name
+resource "random_id" "randomId" {
+    keepers = {
+        # Generate a new ID only when a new resource group is defined
+        resource_group = "${azurerm_resource_group.myterraformgroup.name}"
+    }
+    
+    byte_length = 8
+}
+
+# Create storage account for boot diagnostics
+resource "azurerm_storage_account" "mystorageaccount" {
+    name                        = "diag${random_id.randomId.hex}"
+    resource_group_name         = "${azurerm_resource_group.azy_network.name}"
+    location                    = "West Europe"
+    account_tier                = "Standard"
+    account_replication_type    = "LRS"
+}
+# Create virtual machine
+resource "azurerm_virtual_machine" "myterraformvm" {
+    name                  = "myUbuntuVM"
+    location              = "West Europe"
+    resource_group_name   = "${azurerm_resource_group.azy_network.name}"
+    network_interface_ids = ["${azurerm_network_interface.myterraformnic.id}"]
+    vm_size               = "Standard_DS1_v2"
+
+    storage_os_disk {
+        name              = "myOsDisk"
+        caching           = "ReadWrite"
+        create_option     = "FromImage"
+        managed_disk_type = "Premium_LRS"
+    }
+
+    storage_image_reference {
+        publisher = "Canonical"
+        offer     = "UbuntuServer"
+        sku       = "16.04.0-LTS"
+        version   = "latest"
+    }
+
+    os_profile {
+        computer_name  = "myvm"
+        admin_username = "azureuser"
+    }
+
+    os_profile_linux_config {
+        disable_password_authentication = true
+        ssh_keys {
+            path     = "/home/azureuser/.ssh/authorized_keys"
+            key_data = "ssh-rsa AAAAB3Nz{snip}hwhqT9h"
+        }
+    }
+
+    boot_diagnostics {
+        enabled = "true"
+        storage_uri = "${azurerm_storage_account.mystorageaccount.primary_blob_endpoint}"
+    }
+}
