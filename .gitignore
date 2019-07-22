@@ -7,5 +7,5 @@
 
 # .tfvars files
 *.tfvars
-resources.tf
-servers.tf
+./resources.tf
+./servers.tf
