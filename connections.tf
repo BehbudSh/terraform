@@ -6,9 +6,9 @@ provider "azurerm" {
 }
 
 provider "vsphere" {
-  user           = "administrator@vsphere.local"
-  password       = "Qwerty123!"
-  vsphere_server = "esxvi02.atl.lan"
+  user           = "vspehere_username"
+  password       = "vsphere_password"
+  vsphere_server = "ip_or_hostname"
  
   # If you have a self-signed cert
   allow_unverified_ssl = true
