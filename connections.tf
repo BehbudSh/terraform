@@ -1,15 +1,15 @@
 provider "azurerm" {
   subscription_id = "${var.subscription_id}"
-  client_id = "${var.client_id}"
-  client_secret = "${var.client_secret}"
-  tenant_id = "${var.tenant_id}" 
+  client_id       = "${var.client_id}"
+  client_secret   = "${var.client_secret}"
+  tenant_id       = "${var.tenant_id}"
 }
 
 provider "vsphere" {
   user           = "vspehere_username"
   password       = "vsphere_password"
   vsphere_server = "ip_or_hostname"
- 
+
   # If you have a self-signed cert
   allow_unverified_ssl = true
 }
